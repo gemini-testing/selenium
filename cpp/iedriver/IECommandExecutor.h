@@ -92,8 +92,8 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
   static unsigned int WINAPI ThreadProc(LPVOID lpParameter);
   static unsigned int WINAPI WaitThreadProc(LPVOID lpParameter);
 
-  std::string current_browser_id(void) const { 
-    return this->current_browser_id_; 
+  std::string current_browser_id(void) const {
+    return this->current_browser_id_;
   }
   void set_current_browser_id(const std::string& browser_id) {
     this->current_browser_id_ = browser_id;
@@ -125,11 +125,11 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
                      const std::string& criteria,
                      Json::Value* found_elements) const;
 
-  int implicit_wait_timeout(void) const { 
-    return this->implicit_wait_timeout_; 
+  int implicit_wait_timeout(void) const {
+    return this->implicit_wait_timeout_;
   }
-  void set_implicit_wait_timeout(const int timeout) { 
-    this->implicit_wait_timeout_ = timeout; 
+  void set_implicit_wait_timeout(const int timeout) {
+    this->implicit_wait_timeout_ = timeout;
   }
 
   int async_script_timeout(void) const { return this->async_script_timeout_;  }
@@ -144,12 +144,12 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
 
   bool is_valid(void) const { return this->is_valid_; }
   void set_is_valid(const bool session_is_valid) {
-    this->is_valid_ = session_is_valid; 
+    this->is_valid_ = session_is_valid;
   }
 
   bool is_quitting(void) const { return this->is_quitting_; }
   void set_is_quitting(const bool session_is_quitting) {
-    this->is_quitting_ = session_is_quitting; 
+    this->is_quitting_ = session_is_quitting;
   }
 
   bool enable_element_cache_cleanup(void) const {
@@ -185,6 +185,14 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
   }
   void set_page_load_strategy(const std::string& page_load_strategy) {
     this->page_load_strategy_ = page_load_strategy;
+  }
+
+  bool resize_when_taking_screenshot(void) const {
+    return this->resize_when_taking_screenshot_;
+  }
+
+  void set_resize_when_taking_screenshot(const bool resize_when_taking_screenshot) {
+    this->resize_when_taking_screenshot_ = resize_when_taking_screenshot;
   }
 
   ElementFinder element_finder(void) const { return this->element_finder_; }
@@ -238,6 +246,7 @@ class IECommandExecutor : public CWindowImpl<IECommandExecutor> {
   std::string unexpected_alert_behavior_;
   bool validate_cookie_document_type_;
   std::string page_load_strategy_;
+  bool resize_when_taking_screenshot_;
 
   Command current_command_;
   std::string serialized_response_;

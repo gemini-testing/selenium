@@ -63,11 +63,12 @@ class ScreenshotCommandHandler : public IECommandHandler {
     HRESULT hr;
     int i = 0;
     int tries = 4;
+    const bool resize = executor.resize_when_taking_screenshot();
     do {
       this->ClearImage();
 
       this->image_ = new CImage();
-      hr = this->CaptureBrowser(browser_wrapper);
+      hr = this->CaptureBrowser(browser_wrapper, resize);
       if (FAILED(hr)) {
         LOGHR(WARN, hr) << "Failed to capture browser image at " << i << " try";
         this->ClearImage();
@@ -108,8 +109,12 @@ class ScreenshotCommandHandler : public IECommandHandler {
     }
   }
 
-  HRESULT CaptureBrowser(BrowserHandle browser) {
-    LOG(TRACE) << "Entering ScreenshotCommandHandler::CaptureBrowser";
+  HRESULT CaptureBrowser(BrowserHandle handle, bool resize) {
+    return resize? CaptureFullPage(handle) : CaptureViewport(handle);
+  }
+
+  HRESULT CaptureFullPage(BrowserHandle browser) {
+    LOG(TRACE) << "Entering ScreenshotCommandHandler::CaptureFullPage";
 
     ie_window_handle = browser->GetTopLevelWindowHandle();
     HWND content_window_handle = browser->GetContentWindowHandle();
@@ -147,7 +152,7 @@ class ScreenshotCommandHandler : public IECommandHandler {
     // big, so we'll cap the allowable screenshot size to that.
     //
     // GDI+ limit after which it may report Generic error for some image types
-    int SIZE_LIMIT = 65534; 
+    int SIZE_LIMIT = 65534;
     if (max_height > SIZE_LIMIT) {
       LOG(WARN) << "Required height is greater than limit. Truncating screenshot height.";
       max_height = SIZE_LIMIT;
@@ -165,7 +170,7 @@ class ScreenshotCommandHandler : public IECommandHandler {
                << original_width << ", " << original_height;
 
     // The resize message is being ignored if the window appears to be
-    // maximized.  There's likely a way to bypass that. The kludgy way 
+    // maximized.  There's likely a way to bypass that. The kludgy way
     // is to unmaximize the window, then move on with setting the window
     // to the dimensions we really want.  This is okay because we revert
     // back to the original dimensions afterward.
@@ -180,21 +185,7 @@ class ScreenshotCommandHandler : public IECommandHandler {
     browser->SetWidth(max_width);
     browser->SetHeight(max_height);
 
-    // Capture the window's canvas to a DIB.
-    BOOL created = this->image_->Create(document_info.width,
-                                        document_info.height,
-                                        /*numbers of bits per pixel = */ 32);
-    if (!created) {
-      LOG(WARN) << "Unable to initialize image object";
-    }
-    HDC device_context_handle = this->image_->GetDC();
-
-    BOOL print_result = ::PrintWindow(content_window_handle,
-                                      device_context_handle,
-                                      PW_CLIENTONLY);
-    if (!print_result) {
-      LOG(WARN) << "PrintWindow API is not able to get content window screenshot";
-    }
+    CaptureWindow(content_window_handle, document_info.width, document_info.height);
 
     this->UninstallWindowsHook();
 
@@ -206,8 +197,37 @@ class ScreenshotCommandHandler : public IECommandHandler {
       browser->SetWidth(original_width);
     }
 
-    this->image_->ReleaseDC();
     return S_OK;
+  }
+
+  HRESULT CaptureViewport(BrowserHandle browser) {
+    LOG(TRACE) << "Entering ScreenshotCommandHandler::CaptureViewport";
+
+    HWND content_window_handle = browser->GetContentWindowHandle();
+    int content_width = 0, content_height = 0;
+
+    this->GetWindowDimensions(content_window_handle, &content_width, &content_height);
+    CaptureWindow(content_window_handle, content_width, content_height);
+
+    return S_OK;
+  }
+
+  void CaptureWindow(HWND window_handle, long width, long height) {
+    // Capture the window's canvas to a DIB.
+    BOOL created = this->image_->Create(width, height, 32);
+    if (!created) {
+      LOG(WARN) << "Unable to initialize image object";
+    }
+    HDC device_context_handle = this->image_->GetDC();
+
+    BOOL print_result = ::PrintWindow(window_handle,
+                                      device_context_handle,
+                                      PW_CLIENTONLY);
+    if (!print_result) {
+      LOG(WARN) << "PrintWindow API is not able to get content window screenshot";
+    }
+
+    this->image_->ReleaseDC();
   }
 
   bool IsSameColour() {
@@ -274,7 +294,7 @@ class ScreenshotCommandHandler : public IECommandHandler {
     BYTE* global_lock = reinterpret_cast<BYTE*>(::GlobalLock(global_memory_handle));
     if (global_lock == NULL) {
       LOGERR(WARN) << "Unable to lock memory for base64 encoding";
-      ::GlobalUnlock(global_memory_handle);      
+      ::GlobalUnlock(global_memory_handle);
       return E_FAIL;
     }
 
@@ -349,7 +369,7 @@ class ScreenshotCommandHandler : public IECommandHandler {
                                    hook_procedure,
                                    instance_handle,
                                    thread_id);
-    if (next_hook == NULL) {      
+    if (next_hook == NULL) {
       LOGERR(WARN) << "Unable to set windows hook to catch WM_GETMINMAXINFO";
     }
   }
@@ -365,11 +385,11 @@ class ScreenshotCommandHandler : public IECommandHandler {
 extern "C" {
 #endif
 
-// This function is our message processor that we inject into the IEFrame 
-// process.  Its sole purpose is to process WM_GETMINMAXINFO messages and 
-// modify the max tracking size so that we can resize the IEFrame window to 
-// greater than the virtual screen resolution.  All other messages are 
-// delegated to the original IEFrame message processor.  This function 
+// This function is our message processor that we inject into the IEFrame
+// process.  Its sole purpose is to process WM_GETMINMAXINFO messages and
+// modify the max tracking size so that we can resize the IEFrame window to
+// greater than the virtual screen resolution.  All other messages are
+// delegated to the original IEFrame message processor.  This function
 // uninjects itself immediately upon execution.
 LRESULT CALLBACK MinMaxInfoHandler(HWND hwnd,
                                    UINT message,
@@ -405,10 +425,10 @@ LRESULT CALLBACK MinMaxInfoHandler(HWND hwnd,
                           lParam);
 }
 
-// Many thanks to sunnyandy for helping out with this approach.  What we're 
+// Many thanks to sunnyandy for helping out with this approach.  What we're
 // doing here is setting up a Windows hook to see incoming messages to the
 // IEFrame's message processor.  Once we find one that's WM_GETMINMAXINFO,
-// we inject our own message processor into the IEFrame process to handle 
+// we inject our own message processor into the IEFrame process to handle
 // that one message. WM_GETMINMAXINFO is sent on a resize event so the process
 // can see how large a window can be. By modifying the max values, we can allow
 // a window to be sized greater than the (virtual) screen resolution would
@@ -419,7 +439,7 @@ LRESULT CALLBACK ScreenshotWndProc(int nCode, WPARAM wParam, LPARAM lParam) {
   CWPSTRUCT* call_window_proc_struct = reinterpret_cast<CWPSTRUCT*>(lParam);
   if (WM_GETMINMAXINFO == call_window_proc_struct->message) {
     // Inject our own message processor into the process so we can modify
-    // the WM_GETMINMAXINFO message. It is not possible to modify the 
+    // the WM_GETMINMAXINFO message. It is not possible to modify the
     // message from this hook, so the best we can do is inject a function
     // that can.
     LONG_PTR proc = ::SetWindowLongPtr(call_window_proc_struct->hwnd,
