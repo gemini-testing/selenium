@@ -51,6 +51,7 @@
 #define ENSURE_CLEAN_SESSION_CAPABILITY "ie.ensureCleanSession"
 #define FORCE_SHELL_WINDOWS_API_CAPABILITY "ie.forceShellWindowsApi"
 #define VALIDATE_COOKIE_DOCUMENT_TYPE_CAPABILITY "ie.validateCookieDocumentType"
+#define RESIZE_WHEN_TAKING_SCREENSHOT_CAPABILITY "ie.resizeWhenTakingScreenshot"
 
 using namespace std;
 

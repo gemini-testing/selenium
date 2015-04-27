@@ -76,6 +76,8 @@ class NewSessionCommandHandler : public IECommandHandler {
       Json::Value enable_element_cache_cleanup = this->GetCapability(it->second, ENABLE_ELEMENT_CACHE_CLEANUP_CAPABILITY, Json::booleanValue, true);
       mutable_executor.set_enable_element_cache_cleanup(enable_element_cache_cleanup.asBool());
       Json::Value enable_persistent_hover = this->GetCapability(it->second, ENABLE_PERSISTENT_HOVER_CAPABILITY, Json::booleanValue, true);
+      Json::Value resize_when_taking_screenshot = this->GetCapability(it->second, RESIZE_WHEN_TAKING_SCREENSHOT_CAPABILITY, Json::booleanValue, true);
+      mutable_executor.set_resize_when_taking_screenshot(resize_when_taking_screenshot.asBool());
       if (require_window_focus.asBool() || !enable_native_events.asBool()) {
         // Setting "require_window_focus" implies SendInput() API, and does not therefore require
         // persistent hover. Likewise, not using native events requires no persistent hover either.
