@@ -91,7 +91,7 @@ LRESULT IECommandExecutor::OnCreate(UINT uMsg,
                                     LPARAM lParam,
                                     BOOL& bHandled) {
   LOG(TRACE) << "Entering IECommandExecutor::OnCreate";
-  
+
   CREATESTRUCT* create = reinterpret_cast<CREATESTRUCT*>(lParam);
   IECommandExecutorThreadContext* context = reinterpret_cast<IECommandExecutorThreadContext*>(create->lpCreateParams);
   this->port_ = context->port;
@@ -104,7 +104,7 @@ LRESULT IECommandExecutor::OnCreate(UINT uMsg,
   status = ::UuidToString(&guid, &guid_string);
 
   // RPC_WSTR is currently typedef'd in RpcDce.h (pulled in by rpc.h)
-  // as unsigned short*. It needs to be typedef'd as wchar_t* 
+  // as unsigned short*. It needs to be typedef'd as wchar_t*
   wchar_t* cast_guid_string = reinterpret_cast<wchar_t*>(guid_string);
   this->SetWindowText(cast_guid_string);
 
@@ -126,6 +126,7 @@ LRESULT IECommandExecutor::OnCreate(UINT uMsg,
   this->page_load_timeout_ = -1;
   this->is_waiting_ = false;
   this->page_load_strategy_ = "normal";
+  this->resize_when_taking_screenshot_ = true;
 
   this->input_manager_ = new InputManager();
   this->input_manager_->Initialize(&this->managed_elements_);
@@ -225,7 +226,7 @@ LRESULT IECommandExecutor::OnWait(UINT uMsg,
       if (this->is_waiting_) {
         // If we are still waiting, we need to wait a bit then post a message to
         // ourselves to run the wait again. However, we can't wait using Sleep()
-        // on this thread. This call happens in a message loop, and we would be 
+        // on this thread. This call happens in a message loop, and we would be
         // unable to process the COM events in the browser if we put this thread
         // to sleep.
         unsigned int thread_id = 0;
@@ -474,7 +475,7 @@ void IECommandExecutor::DispatchCommand() {
   LOG(TRACE) << "Entering IECommandExecutor::DispatchCommand";
 
   Response response(this->session_id_);
-  CommandHandlerMap::const_iterator found_iterator = 
+  CommandHandlerMap::const_iterator found_iterator =
       this->command_handlers_.find(this->current_command_.command_type());
 
   if (found_iterator == this->command_handlers_.end()) {
@@ -605,7 +606,7 @@ int IECommandExecutor::GetManagedBrowser(const std::string& browser_id,
     return ENOSUCHWINDOW;
   }
 
-  BrowserMap::const_iterator found_iterator = 
+  BrowserMap::const_iterator found_iterator =
       this->managed_browsers_.find(browser_id);
   if (found_iterator == this->managed_browsers_.end()) {
     LOG(WARN) << "Unable to find managed browser with id " << browser_id;
@@ -656,12 +657,12 @@ int IECommandExecutor::CreateNewBrowser(std::string* error_message) {
   process_window_info.pBrowser = NULL;
   bool attached = this->factory_->AttachToBrowser(&process_window_info,
                                                   error_message);
-  if (!attached) { 
+  if (!attached) {
     LOG(WARN) << "Unable to attach to browser COM object";
     this->is_waiting_ = false;
     return ENOSUCHDRIVER;
   }
-  // Set persistent hover functionality in the interactions implementation. 
+  // Set persistent hover functionality in the interactions implementation.
   setEnablePersistentHover(this->enable_persistent_hover_);
   LOG(INFO) << "Persistent hovering set to: " << this->enable_persistent_hover_;
   if (!this->enable_persistent_hover_) {
