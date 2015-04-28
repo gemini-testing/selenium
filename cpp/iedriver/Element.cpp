@@ -15,11 +15,11 @@
 // limitations under the License.
 
 // Ignoring code analysis warnings for:
-// "'argument n' might be '0': this does not adhere to the specification for 
+// "'argument n' might be '0': this does not adhere to the specification for
 // the function 'IHTMLDocument4::createEventObject'", and "'argument n' might
 // be null: this does not adhere to the specification for the function
-// 'IHTMLDocument4::createEventObject'", and. 
-// IHTMLDocument4::createEventObject() should have its first argument set to 
+// 'IHTMLDocument4::createEventObject'", and.
+// IHTMLDocument4::createEventObject() should have its first argument set to
 // NULL to create an empty event object, per documentation at:
 // http://msdn.microsoft.com/en-us/library/aa752524(v=vs.85).aspx
 #pragma warning (disable: 6309)
@@ -57,7 +57,7 @@ Element::Element(IHTMLElement* element, HWND containing_window_handle) {
   }
 
   // RPC_WSTR is currently typedef'd in RpcDce.h (pulled in by rpc.h)
-  // as unsigned short*. It needs to be typedef'd as wchar_t* 
+  // as unsigned short*. It needs to be typedef'd as wchar_t*
   wchar_t* cast_guid_string = reinterpret_cast<wchar_t*>(guid_string);
   this->element_id_ = StringUtilities::ToString(cast_guid_string);
 
@@ -75,7 +75,7 @@ Json::Value Element::ConvertToJson() {
   LOG(TRACE) << "Entering Element::ConvertToJson";
 
   Json::Value json_wrapper;
-  // TODO: Remove the "ELEMENT" property once all target bindings 
+  // TODO: Remove the "ELEMENT" property once all target bindings
   // have been updated to use spec-compliant protocol.
   json_wrapper["element-6066-11e4-a52e-4f735466cecf"] = this->element_id_;
   json_wrapper["ELEMENT"] = this->element_id_;
@@ -100,7 +100,7 @@ int Element::IsDisplayed(bool* result) {
   // N.B., The second argument to the IsDisplayed atom is "ignoreOpacity".
   Script script_wrapper(doc, script_source, 2);
   script_wrapper.AddArgument(this->element_);
-  script_wrapper.AddArgument(false);
+  script_wrapper.AddArgument(true);
   status_code = script_wrapper.Execute();
 
   if (status_code == WD_SUCCESS) {
@@ -218,7 +218,7 @@ int Element::GetClickLocation(const ELEMENT_SCROLL_BEHAVIOR scroll_behavior,
   if (status_code != WD_SUCCESS) {
     LOG(WARN) << "Unable to determine element is displayed";
     return status_code;
-  } 
+  }
 
   if (!displayed) {
     LOG(WARN) << "Element is not displayed";
@@ -259,7 +259,7 @@ int Element::GetAttributeValue(const std::string& attribute_name,
   script_wrapper.AddArgument(this->element_);
   script_wrapper.AddArgument(wide_attribute_name);
   status_code = script_wrapper.Execute();
-  
+
   if (status_code == WD_SUCCESS) {
     *value_is_null = !script_wrapper.ConvertResultToString(attribute_value);
   } else {
@@ -319,7 +319,7 @@ int Element::GetLocationOnceScrolledIntoView(const ELEMENT_SCROLL_BEHAVIOR scrol
   LocationInfo element_location = {};
   int result = this->GetLocation(&element_location, frame_locations);
   bool document_contains_frames = frame_locations->size() != 0;
-  LocationInfo click_location = this->CalculateClickPoint(element_location, document_contains_frames);  
+  LocationInfo click_location = this->CalculateClickPoint(element_location, document_contains_frames);
 
   if (result != WD_SUCCESS ||
       !this->IsLocationInViewPort(click_location, document_contains_frames) ||
@@ -399,9 +399,9 @@ bool Element::IsHiddenByOverflow() {
 bool Element::IsLocationVisibleInFrames(const LocationInfo location, const std::vector<LocationInfo> frame_locations) {
   std::vector<LocationInfo>::const_iterator iterator = frame_locations.begin();
   for (; iterator != frame_locations.end(); ++iterator) {
-    if (location.x < iterator->x || 
+    if (location.x < iterator->x ||
         location.y < iterator->y ||
-        location.x > iterator->x + iterator->width || 
+        location.x > iterator->x + iterator->width ||
         location.y > iterator->y + iterator->height) {
       return false;
     }
@@ -447,7 +447,7 @@ int Element::GetLocation(LocationInfo* location, std::vector<LocationInfo>* fram
     return EOBSOLETEELEMENT;
   }
 
-  // If this element is inline, we need to check whether we should 
+  // If this element is inline, we need to check whether we should
   // use getBoundingClientRect() or the first non-zero-sized rect returned
   // by getClientRects(). If the element is not inline, we can use
   // getBoundingClientRect() directly.
@@ -544,8 +544,8 @@ int Element::GetLocation(LocationInfo* location, std::vector<LocationInfo>* fram
 
   bool element_is_in_frame = this->AppendFrameDetails(frame_locations);
   if (!hasAbsolutePositionReadyToReturn) {
-    // On versions of IE prior to 8 on Vista, if the element is out of the 
-    // viewport this would seem to return 0,0,0,0. IE 8 returns position in 
+    // On versions of IE prior to 8 on Vista, if the element is out of the
+    // viewport this would seem to return 0,0,0,0. IE 8 returns position in
     // the DOM regardless of whether it's in the browser viewport.
     long scroll_left, scroll_top = 0;
     element2->get_scrollLeft(&scroll_left);
@@ -646,7 +646,7 @@ bool Element::AppendFrameDetails(std::vector<LocationInfo>* frame_locations) {
     CComVariant index;
     index.vt = VT_I4;
     for (long i = 0; i < frame_count; ++i) {
-      // See if the document in each frame is this element's 
+      // See if the document in each frame is this element's
       // owner document.
       index.lVal = i;
       CComVariant result;
@@ -687,7 +687,7 @@ bool Element::AppendFrameDetails(std::vector<LocationInfo>* frame_locations) {
           // domains. So start at the parent document, and use getElementsByTagName to retrieve
           // all of the iframe elements (if there are no iframe elements, get the frame elements)
           // **** BIG HUGE ASSUMPTION!!! ****
-          // The index of the frame from the document.frames collection will correspond to the 
+          // The index of the frame from the document.frames collection will correspond to the
           // index into the collection of iframe/frame elements returned by getElementsByTagName.
           LOG(WARN) << "Attempting to get frameElement via JavaScript failed. "
                     << "This usually means the frame is in a different domain than the parent frame. "
@@ -749,7 +749,7 @@ bool Element::AppendFrameDetails(std::vector<LocationInfo>* frame_locations) {
             // Take the border of the frame element into account.
             // N.B. We don't have to do this for non-frame elements,
             // because the border is part of the hit-test region. For
-            // finding offsets to get absolute position of elements 
+            // finding offsets to get absolute position of elements
             // within frames, the origin of the frame document is offset
             // by the border width.
             CComPtr<IHTMLElement2> border_width_element;
@@ -867,7 +867,7 @@ LocationInfo Element::CalculateClickPoint(const LocationInfo location, const boo
     }
   }
 
-  LocationInfo click_location = {};  
+  LocationInfo click_location = {};
   click_location.x = location.x + (corrected_width / 2);
   click_location.y = location.y + (corrected_height / 2);
   return click_location;
@@ -879,7 +879,7 @@ bool Element::IsLocationInViewPort(const LocationInfo location, const bool docum
   LocationInfo clickable_viewport = {};
   bool result = this->GetClickableViewPortLocation(document_contains_frames, &clickable_viewport);
   if (!result) {
-    // problem is already logged, so just return 
+    // problem is already logged, so just return
     return false;
   }
 
